@@ -1,7 +1,7 @@
 import praw
 import os
 from dotenv import load_dotenv
-
+from praw.models import Submission
 load_dotenv()
 
 CLIENT_ID = os.getenv('CLIENT_ID')
@@ -18,7 +18,8 @@ reddit = praw.Reddit(
     username=USERNAME,
 )
 
-submissions = reddit.subreddit("AskFrance").stream.submissions()
+submissions: list[Submission] = reddit.subreddit("AskFrance").stream.submissions()
 
 for submission in submissions:
     print(submission.title)
+    
