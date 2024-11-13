@@ -1,74 +1,14 @@
 from datetime import datetime
+import os
 import sqlite3
-from typing import TypedDict, NotRequired
-
-
-class User(TypedDict):
-    """
-    This module defines the User TypedDict for representing user information in the database.
-
-    Attributes:
-        Id (str): The unique identifier for the user.
-        Name (str): The name of the user.
-        Genre (Optional[str]): The genre of the user. This field is optional and can be None.
-        Age (Optional[int]): The age of the user. This field is optional and can be None.
-    """
-    Id: str
-    Name: str
-    Genre: NotRequired[str | None]
-    Age: NotRequired[int | None]
-
-
-class Submission(TypedDict):
-    """
-    This module defines the Submission TypedDict for representing submission information in the database.
-
-    Attributes:
-        Id (str): The unique identifier for the submission.
-        Author_id (str): The unique identifier of the author (must correspond to an existing user Id).
-        Created (datetime): The creation date of the submission.
-        Sub_id (str): The identifier of the subreddit where the submission was posted.
-        Url (str): The URL of the submission.
-        Title (str): The title of the submission.
-        Body (str): The body of the submission.
-        Keywords (Optional[list[str]]): A list of keywords describing the submission. This field is optional and can be None.
-        Topic (Optional[str]): The topic of the submission. This field is optional and can be None.
-    """
-    Id: str
-    Author_id: str
-    Created: datetime
-    Sub_id: str
-    Url: str
-    Title: str
-    Body: str
-    Keywords: NotRequired[list[str] | None]
-    Topic: NotRequired[str | None]
-
-
-class Comment(TypedDict):
-    """
-    This module defines the Comment TypedDict for representing comment information in the database.
-
-    Attributes:
-        Id (str): The unique identifier for the comment.
-        Author_id (str): The unique identifier of the author (must correspond to an existing user Id).
-        Created (datetime): The creation date of the comment.
-        Parent_id (str): The identifier of the parent comment (or submission if it's a first level comment).
-        Submission_id (str): The identifier of the submission to which the comment belongs.
-        Body (str): The body of the comment.
-    """
-    Id: str
-    Author_id: str
-    Created: datetime
-    Parent_id: str
-    Submission_id: str
-    Body: str
+from .Types import User, Submission, Comment
 
 
 class DatabaseManager:
     """Gestionnaire de base de données"""
 
-    _file: str = "database.db"
+    # Définir le chemin vers database.db dans le dossier du module
+    _filepath: str = os.path.join(os.path.dirname(__file__), "database.db")
 
     # Schéma de la table User
     _table_user: str = """
@@ -125,7 +65,7 @@ class DatabaseManager:
 
         try:
             # Connexion à la base de données (création du fichier si nécessaire)
-            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
 
             # Création d'un curseur pour exécuter les commandes SQL
             curseur: sqlite3.Cursor = connexion.cursor()
@@ -163,7 +103,7 @@ class DatabaseManager:
 
         try:
             # Connexion à la base de données
-            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Insertion de multiples utilisateurs dans la table User
@@ -210,7 +150,7 @@ class DatabaseManager:
 
         try:
             # Connexion à la base de données
-            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Insertion de multiples soumissions dans la table Submission
@@ -266,7 +206,7 @@ class DatabaseManager:
 
         try:
             # Connexion à la base de données
-            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Insertion de multiples commentaires dans la table Comment
@@ -309,7 +249,7 @@ class DatabaseManager:
 
         try:
             # Connexion à la base de données
-            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Exécution de la requête pour récupérer tous les utilisateurs
@@ -340,7 +280,7 @@ class DatabaseManager:
 
         try:
             # Connexion à la base de données
-            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Exécution de la requête pour récupérer toutes les soumissions
@@ -376,7 +316,7 @@ class DatabaseManager:
 
         try:
             # Connexion à la base de données
-            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Exécution de la requête pour récupérer tous les commentaires
@@ -414,7 +354,7 @@ class DatabaseManager:
         """
         try:
             # Connexion à la base de données
-            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Exécution de la commande avec les paramètres
