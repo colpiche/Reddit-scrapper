@@ -152,11 +152,11 @@ class DatabaseManager:
                 connexion.close()
                 print("Connexion fermée.")
 
-    def add_user(self, user: User):
+    def add_users(self, users: list[User]):
         """
-        Ajoute un utilisateur dans la table User.
+        Ajoute une liste d'utilisateurs dans la table User.
 
-        :param user: User - Un objet utilisateur
+        :param users: list[User] - Une liste d'objets utilisateur
         """
 
         try:
@@ -164,36 +164,40 @@ class DatabaseManager:
             connexion: sqlite3.Connection = sqlite3.connect(self._file)
             curseur: sqlite3.Cursor = connexion.cursor()
 
-            # Insertion d'un utilisateur dans la table User
-            curseur.execute("""
-                INSERT INTO User (Id, Name, Genre, Age)
-                VALUES (?, ?, ?, ?)
-            """, (
-                user["Id"],
-                user["Name"],
-                user.get("Genre"),  # Si "Genre" n'est pas spécifié, cela renverra None
-                user.get("Age")     # Si "Age" n'est pas spécifié, cela renverra None
-            ))
+            # Insertion de multiples utilisateurs dans la table User
+            for user in users:
+                try:
+                    curseur.execute("""
+                        INSERT INTO User (Id, Name, Genre, Age)
+                        VALUES (?, ?, ?, ?)
+                    """, (
+                        user["Id"],
+                        user["Name"],
+                        user.get("Genre"),  # Si "Genre" n'est pas spécifié, cela renverra None
+                        user.get("Age")     # Si "Age" n'est pas spécifié, cela renverra None
+                    ))
+                    # Enregistrement des changements pour chaque utilisateur
+                    connexion.commit()
+                    print(f"Utilisateur '{user['Id']}' ajouté avec succès.")
 
-            # Enregistrement des changements
-            connexion.commit()
-            print(f"Utilisateur '{user['Id']}' ajouté avec succès.")
+                except sqlite3.IntegrityError as e:
+                    print(f"Utilisateur '{user['Id']}' - Erreur d'intégrité lors de l'ajout de l'utilisateur : {e}")
 
-        except sqlite3.IntegrityError as e:
-            print(f"Utilisateur '{user['Id']}' - Erreur d'intégrité lors de l'ajout de l'utilisateur : {e}")
+                except sqlite3.Error as e:
+                    print(f"Utilisateur '{user['Id']}' - Une erreur est survenue lors de l'ajout de l'utilisateur : {e}")
 
         except sqlite3.Error as e:
-            print(f"Utilisateur '{user['Id']}' - Une erreur est survenue : {e}")
+            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
 
         finally:
             # Fermeture de la connexion
             connexion.close()
 
-    def add_submission(self, submission: Submission):
+    def add_submissions(self, submissions: list[Submission]):
         """
-        Ajoute une soumission dans la table Submission.
+        Ajoute une liste de soumissions dans la table Submission.
 
-        :param submission: Submission - Un objet Submission
+        :param submissions: list[Submission] - Une liste d'objets Submission
         """
 
         try:
@@ -201,50 +205,55 @@ class DatabaseManager:
             connexion: sqlite3.Connection = sqlite3.connect(self._file)
             curseur: sqlite3.Cursor = connexion.cursor()
 
-            # Formatage de la liste de mots-clés en une chaîne de caractères séparée par des virgules
-            formatted_keywords: str | None = None
-            keywords = submission.get("Keywords")
-            if keywords:
-                formatted_keywords = ','.join(keywords)
+            # Insertion de multiples soumissions dans la table Submission
+            for submission in submissions:
+                try:
+                    # Formatage de la liste de mots-clés en une chaîne de caractères séparée par des virgules
+                    formatted_keywords: str | None = None
+                    keywords = submission.get("Keywords")
+                    if keywords:
+                        formatted_keywords = ','.join(keywords)
 
-            # Formatage de la date 'Created' en texte au format SQLite
-            formatted_created = self._format_date(submission["Created"])
+                    # Formatage de la date 'Created' en texte au format SQLite
+                    formatted_created = self._format_date(submission["Created"])
 
-            # Insertion d'une soumission dans la table Submission
-            curseur.execute("""
-                INSERT INTO Submission (Id, Author_id, Created, Sub_id, Url, Title, Body, Keywords, Topic)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                submission["Id"],
-                submission["Author_id"],
-                formatted_created,
-                submission["Sub_id"],
-                submission["Url"],
-                submission["Title"],
-                submission["Body"],
-                formatted_keywords,
-                submission.get("Topic")  # Si 'Topic' n'est pas spécifié, cela renverra None
-            ))
+                    curseur.execute("""
+                        INSERT INTO Submission (Id, Author_id, Created, Sub_id, Url, Title, Body, Keywords, Topic)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        submission["Id"],
+                        submission["Author_id"],
+                        formatted_created,
+                        submission["Sub_id"],
+                        submission["Url"],
+                        submission["Title"],
+                        submission["Body"],
+                        formatted_keywords,
+                        submission.get("Topic")  # Si 'Topic' n'est pas spécifié, cela renverra None
+                    ))
 
-            # Enregistrement des changements
-            connexion.commit()
-            print(f"Soumission '{submission['Id']}' ajoutée avec succès.")
+                    # Enregistrement des changements pour chaque soumission
+                    connexion.commit()
+                    print(f"Soumission '{submission['Id']}' ajoutée avec succès.")
 
-        except sqlite3.IntegrityError as e:
-            print(f"Soumission {submission['Id']} - Erreur d'intégrité lors de l'ajout de la soumission : {e}")
+                except sqlite3.IntegrityError as e:
+                    print(f"Soumission '{submission['Id']}' - Erreur d'intégrité lors de l'ajout de la soumission : {e}")
+
+                except sqlite3.Error as e:
+                    print(f"Soumission '{submission['Id']}' - Une erreur est survenue lors de l'ajout de la soumission : {e}")
 
         except sqlite3.Error as e:
-            print(f"Soumission {submission['Id']} - Une erreur est survenue : {e}")
+            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
 
         finally:
             # Fermeture de la connexion
             connexion.close()
 
-    def add_comment(self, comment: Comment):
+    def add_comments(self, comments: list[Comment]):
         """
-        Ajoute un commentaire dans la table Comment.
+        Ajoute une liste de commentaires dans la table Comment.
 
-        :param comment: Comment - Un objet Comment
+        :param comments: list[Comment] - Une liste d'objets Comment
         """
 
         try:
@@ -252,31 +261,35 @@ class DatabaseManager:
             connexion: sqlite3.Connection = sqlite3.connect(self._file)
             curseur: sqlite3.Cursor = connexion.cursor()
 
-            # Formatage de la date 'Created' en texte au format SQLite
-            formatted_created = self._format_date(comment["Created"])
+            # Insertion de multiples commentaires dans la table Comment
+            for comment in comments:
+                try:
+                    formatted_created = self._format_date(comment["Created"])
 
-            # Insertion d'un commentaire dans la table Comment
-            curseur.execute("""
-                INSERT INTO Comment (Id, Author_id, Created, Parent_id, Submission_id, Body)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                comment["Id"],
-                comment["Author_id"],
-                formatted_created,
-                comment["Parent_id"],
-                comment["Submission_id"],
-                comment["Body"]
-            ))
+                    curseur.execute("""
+                        INSERT INTO Comment (Id, Author_id, Created, Parent_id, Submission_id, Body)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (
+                        comment["Id"],
+                        comment["Author_id"],
+                        formatted_created,
+                        comment["Parent_id"],
+                        comment["Submission_id"],
+                        comment["Body"]
+                    ))
 
-            # Enregistrement des changements
-            connexion.commit()
-            print(f"Commentaire '{comment['Id']}' ajouté avec succès.")
+                    # Enregistrement des changements pour chaque commentaire
+                    connexion.commit()
+                    print(f"Commentaire '{comment['Id']}' ajouté avec succès.")
 
-        except sqlite3.IntegrityError as e:
-            print(f"Commentaire {comment['Id']} - Erreur d'intégrité lors de l'ajout du commentaire : {e}")
+                except sqlite3.IntegrityError as e:
+                    print(f"Commentaire '{comment['Id']}' - Erreur d'intégrité lors de l'ajout du commentaire : {e}")
+
+                except sqlite3.Error as e:
+                    print(f"Commentaire '{comment['Id']}' - Une erreur est survenue lors de l'ajout du commentaire : {e}")
 
         except sqlite3.Error as e:
-            print(f"Commentaire {comment['Id']} - Une erreur est survenue : {e}")
+            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
 
         finally:
             # Fermeture de la connexion
