@@ -159,6 +159,8 @@ class DatabaseManager:
         :param users: list[User] - Une liste d'objets utilisateur
         """
 
+        valid_genres = {"M", "F", "NB"}  # Ensemble des valeurs valides pour le champ Genre
+
         try:
             # Connexion à la base de données
             connexion: sqlite3.Connection = sqlite3.connect(self._file)
@@ -167,6 +169,12 @@ class DatabaseManager:
             # Insertion de multiples utilisateurs dans la table User
             for user in users:
                 try:
+                    # Validation de la valeur du champ Genre
+                    genre = user.get("Genre")
+                    if genre is not None and genre not in valid_genres:
+                        print(f"Utilisateur '{user['Id']}' - Valeur de genre invalide : '{genre}' (doit être 'M', 'F' ou 'NB')")
+                        continue  # Passe à l'utilisateur suivant sans insertion
+
                     curseur.execute("""
                         INSERT INTO User (Id, Name, Genre, Age)
                         VALUES (?, ?, ?, ?)
