@@ -394,3 +394,39 @@ class DatabaseManager:
             connexion.close()
 
         return comments
+
+    def execute_command(self, command: str, params: tuple = ()) -> list[tuple] | None:
+        """
+        Exécute une commande SQLite arbitraire et retourne le résultat.
+
+        :param command: str - La commande SQL à exécuter.
+        :param params: tuple - Les paramètres à insérer dans la commande SQL (optionnel).
+        :return: list[tuple] | None - Le résultat de la commande si c'est une requête SELECT,
+                sinon None.
+        """
+        try:
+            # Connexion à la base de données
+            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            curseur: sqlite3.Cursor = connexion.cursor()
+
+            # Exécution de la commande avec les paramètres
+            curseur.execute(command, params)
+
+            # Si la commande est une requête de type SELECT, retourner les résultats
+            if command.strip().upper().startswith("SELECT"):
+                result = curseur.fetchall()
+                return result
+
+            # Si la commande est autre qu'un SELECT, on commit les changements
+            connexion.commit()
+            print("Commande exécutée avec succès.")
+
+        except sqlite3.Error as e:
+            print(f"Erreur lors de l'exécution de la commande : {e}")
+
+        finally:
+            # Fermeture de la connexion
+            connexion.close()
+
+        # Retourner None si la commande n'est pas un SELECT
+        return None
