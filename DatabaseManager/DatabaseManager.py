@@ -294,3 +294,103 @@ class DatabaseManager:
         finally:
             # Fermeture de la connexion
             connexion.close()
+
+    def get_all_users(self) -> list[User]:
+        """Récupère tous les utilisateurs de la table User."""
+        users: list[User] = []
+
+        try:
+            # Connexion à la base de données
+            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            curseur: sqlite3.Cursor = connexion.cursor()
+
+            # Exécution de la requête pour récupérer tous les utilisateurs
+            curseur.execute("SELECT Id, Name, Genre, Age FROM User")
+            rows = curseur.fetchall()
+
+            # Conversion des résultats en liste d'objets User
+            for row in rows:
+                user = User(
+                    Id=row[0],
+                    Name=row[1],
+                    Genre=row[2],
+                    Age=row[3]
+                )
+                users.append(user)
+
+        except sqlite3.Error as e:
+            print(f"Erreur lors de la récupération des utilisateurs : {e}")
+
+        finally:
+            connexion.close()
+
+        return users
+
+    def get_all_submissions(self) -> list[Submission]:
+        """Récupère toutes les soumissions de la table Submission."""
+        submissions: list[Submission] = []
+
+        try:
+            # Connexion à la base de données
+            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            curseur: sqlite3.Cursor = connexion.cursor()
+
+            # Exécution de la requête pour récupérer toutes les soumissions
+            curseur.execute("SELECT Id, Author_id, Created, Sub_id, Url, Title, Body, Keywords, Topic FROM Submission")
+            rows = curseur.fetchall()
+
+            # Conversion des résultats en liste d'objets Submission
+            for row in rows:
+                submission = Submission(
+                    Id=row[0],
+                    Author_id=row[1],
+                    Created=datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S.%f'),
+                    Sub_id=row[3],
+                    Url=row[4],
+                    Title=row[5],
+                    Body=row[6],
+                    Keywords=row[7].split(',') if row[7] else None,
+                    Topic=row[8]
+                )
+                submissions.append(submission)
+
+        except sqlite3.Error as e:
+            print(f"Erreur lors de la récupération des soumissions : {e}")
+
+        finally:
+            connexion.close()
+
+        return submissions
+
+    def get_all_comments(self) -> list[Comment]:
+        """Récupère tous les commentaires de la table Comment."""
+        comments: list[Comment] = []
+
+        try:
+            # Connexion à la base de données
+            connexion: sqlite3.Connection = sqlite3.connect(self._file)
+            curseur: sqlite3.Cursor = connexion.cursor()
+
+            # Exécution de la requête pour récupérer tous les commentaires
+            curseur.execute("SELECT Id, Author_id, Created, Parent_id, Submission_id, Body FROM Comment")
+            rows = curseur.fetchall()
+
+            # Conversion des résultats en liste d'objets Comment
+            for row in rows:
+                comment = Comment(
+                    Id=row[0],
+                    Author_id=row[1],
+                    Created=datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S.%f'),
+                    Parent_id=row[3],
+                    Submission_id=row[4],
+                    Body=row[5]
+                )
+                comments.append(comment)
+
+        except sqlite3.Error as e:
+            print(f"Erreur lors de la récupération des commentaires : {e}")
+
+        finally:
+            connexion.close()
+
+        return comments
