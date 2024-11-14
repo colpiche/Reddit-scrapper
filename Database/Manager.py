@@ -1,4 +1,6 @@
+from collections import Counter
 from datetime import datetime
+from LLM.Types import LLMResponseFormat
 import os
 import sqlite3
 from .Types import DbUser, DbSubmission, DbComment
@@ -243,6 +245,44 @@ class DatabaseManager:
         finally:
             # Fermeture de la connexion
             connexion.close()
+    
+    def update_keywords_and_topic(self, dict: DbSubmission, LLMResponse: LLMResponseFormat):
+        """
+        Met à jour les mots-clés et le sujet d'une soumission.
+
+        :param text: Submission - L'objet soumission à mettre à jour.
+        :param LLMResponse: LLMResponseFormat - La réponse générée par le modèle LLM.
+        """
+
+        try:
+            # Connexion à la base de données
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
+            curseur: sqlite3.Cursor = connexion.cursor()
+
+            # Formatage de la liste de mots-clés en une chaîne de caractères séparée par des virgules
+            formatted_keywords: str = ','.join(LLMResponse["keywords"])
+
+            # Mise à jour des mots-clés et du sujet dans la table correspondante
+            curseur.execute("""
+                UPDATE Submission
+                SET Keywords = ?, Topic = ?
+                WHERE Id = ?
+            """, (
+                formatted_keywords,
+                LLMResponse["topic"],
+                dict["Id"]
+            ))
+
+            # Enregistrement des changements
+            connexion.commit()
+            print(f"Mots-clés et sujet mis à jour pour '{dict['Id']}' avec succès.")
+
+        except sqlite3.Error as e:
+            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
+
+        finally:
+            # Fermeture de la connexion
+            connexion.close()
 
     def get_all_users(self) -> list[DbUser]:
         """Récupère tous les utilisateurs de la table User."""
@@ -379,3 +419,53 @@ class DatabaseManager:
 
         # Retourner None si la commande n'est pas un SELECT
         return None
+    
+    def calculate_keyword_occurrences(self):
+        """
+        Calcule les occurrences de chaque mot-clé dans la table Submission,
+        et enregistre les résultats dans une nouvelle table KeywordWeight.
+        """
+        
+        # Connexion à la base de données
+        connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
+        curseur: sqlite3.Cursor = connexion.cursor()
+
+        try:
+            # Création de la table KeywordWeight si elle n'existe pas
+            curseur.execute("""
+                CREATE TABLE IF NOT EXISTS KeywordWeight (
+                    Keyword TEXT PRIMARY KEY,
+                    Weight INTEGER NOT NULL
+                );
+            """)
+
+            # Vider la table KeywordWeight si elle existe déjà
+            curseur.execute("DELETE FROM KeywordWeight")
+
+            # Récupération de tous les mots-clés dans la table Submission
+            curseur.execute("SELECT Keywords FROM Submission")
+            rows = curseur.fetchall()
+
+            # Compter les occurrences des mots-clés
+            keyword_counter = Counter()
+            for row in rows:
+                if row[0]:  # S'assurer que Keywords n'est pas NULL
+                    keywords = row[0].split(',')  # Supposer que les mots-clés sont séparés par des virgules
+                    keyword_counter.update(keywords)
+
+            # Insérer les mots-clés et leurs occurrences dans la table KeywordWeight
+            for keyword, weight in keyword_counter.items():
+                curseur.execute("""
+                    INSERT INTO KeywordWeight (Keyword, Weight)
+                    VALUES (?, ?)
+                """, (keyword, weight))
+
+            # Sauvegarder les modifications
+            connexion.commit()
+            print("Table KeywordWeight mise à jour avec les occurrences des mots-clés.")
+
+        except sqlite3.Error as e:
+            print(f"Erreur lors du calcul des occurrences des mots-clés : {e}")
+
+        finally:
+            connexion.close()
