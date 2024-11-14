@@ -1,4 +1,4 @@
-from Database.Types import DbWeightedKeyword, DbWeightedCategory
+from Database.Types import DbWeightedCategory, DbWeightedKeyword
 from typing import TypedDict
 
 

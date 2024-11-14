@@ -1,11 +1,11 @@
 from Database.Types import DbWeightedCategory, DbWeightedKeyword, DbSubmission
 import json
-from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from .Types import LLMCategoryRequestFormat, LLMKeywordsTopicResponseFormat
+from langchain_openai import AzureChatOpenAI
 import os
 import re
 import tiktoken
+from .Types import LLMCategoryRequestFormat, LLMKeywordsTopicResponseFormat
 
 
 class LLMAgent:
@@ -49,13 +49,15 @@ class LLMAgent:
             api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
         )
 
-    def request_keywords_and_topic(self, submission: DbSubmission) -> LLMKeywordsTopicResponseFormat:
+    def request_keywords_and_topic(
+        self, submission: DbSubmission
+    ) -> LLMKeywordsTopicResponseFormat:
         """
         Request the LLM to extract keywords and topic from the submission.
-        
+
         Args:
             submission (DbSubmission): The submission from which to extract keywords and topic.
-        
+
         Returns:
             LLMKeywordsTopicResponseFormat: The extracted keywords and topic.
         """
@@ -82,13 +84,15 @@ class LLMAgent:
             print("La chaîne JSON ne correspond pas à la structure attendue.")
             return {"keywords": [], "topic": ""}
 
-    def categorize_keywords(self, LLMCategoryRequest: LLMCategoryRequestFormat) -> list[DbWeightedCategory]:
+    def categorize_keywords(
+        self, LLMCategoryRequest: LLMCategoryRequestFormat
+    ) -> list[DbWeightedCategory]:
         """
         Categorize the weighted keywords into the specified number of categories.
 
         Args:
             LLMCategoryRequest (LLMCategoryRequestFormat): The request for keyword categorization.
-        
+
         Returns:
             list[DbWeightedCategory]: The categorized weighted keywords.
         """
@@ -97,11 +101,15 @@ class LLMAgent:
 
         # Diviser les mots-clés en plusieurs sous-ensembles si la taille dépasse une limite de tokens
         max_tokens = 7500  # A ajuster selon le modèle)
-        chunks: list[LLMCategoryRequestFormat] = self.chunk_keywords(LLMCategoryRequest, max_tokens)
+        chunks: list[LLMCategoryRequestFormat] = self.chunk_keywords(
+            LLMCategoryRequest, max_tokens
+        )
 
         results: list[DbWeightedCategory] = []
         for chunk in chunks:
-            response: list[DbWeightedCategory] = self.request_object_categorization(chunk)
+            response: list[DbWeightedCategory] = self.request_object_categorization(
+                chunk
+            )
             results.extend(response)
             print("Chunk categorized.")
 
@@ -109,21 +117,23 @@ class LLMAgent:
         final_results: list[DbWeightedCategory] = self.request_object_categorization(
             LLMCategoryRequestFormat(
                 weighted_objects=results,
-                category_number=LLMCategoryRequest["category_number"]
+                category_number=LLMCategoryRequest["category_number"],
             )
         )
 
         print("Keywords categorized.")
         return final_results
 
-    def chunk_keywords(self, LLMCategoryRequest: LLMCategoryRequestFormat, max_tokens: int) -> list[LLMCategoryRequestFormat]:
+    def chunk_keywords(
+        self, LLMCategoryRequest: LLMCategoryRequestFormat, max_tokens: int
+    ) -> list[LLMCategoryRequestFormat]:
         """
         Chunk the keywords into smaller subsets based on the model token limit.
 
         Args:
             LLMCategoryRequest (LLMCategoryRequestFormat): The request for keyword categorization.
             max_tokens (int): The maximum number of tokens allowed by the model.
-        
+
         Returns:
             list[LLMCategoryRequestFormat]: The chunked keywords.
         """
@@ -138,31 +148,51 @@ class LLMAgent:
         current_tokens = 0
 
         for weighted_keyword in LLMCategoryRequest["weighted_objects"]:
-            keyword_tokens = len(tokenizer.encode(str(weighted_keyword)))  # Calculer les tokens exacts
+            keyword_tokens = len(
+                tokenizer.encode(str(weighted_keyword))
+            )  # Calculer les tokens exacts
 
             # Vérifier si l'ajout de ce mot-clé dépasse la limite de tokens
             if current_tokens + keyword_tokens > max_tokens:
-                chunks.append({"weighted_objects": current_chunk, "category_number": LLMCategoryRequest["category_number"]})
-                current_chunk = [weighted_keyword]  # Commencer un nouveau chunk avec le mot-clé courant
+                chunks.append(
+                    {
+                        "weighted_objects": current_chunk,
+                        "category_number": LLMCategoryRequest["category_number"],
+                    }
+                )
+                current_chunk = [
+                    weighted_keyword
+                ]  # Commencer un nouveau chunk avec le mot-clé courant
                 current_tokens = keyword_tokens  # Réinitialiser le nombre de tokens avec le nouveau mot-clé
             else:
-                current_chunk.append(weighted_keyword)  # Ajouter le mot-clé au chunk en cours
-                current_tokens += keyword_tokens  # Ajouter les tokens du mot-clé au total
+                current_chunk.append(
+                    weighted_keyword
+                )  # Ajouter le mot-clé au chunk en cours
+                current_tokens += (
+                    keyword_tokens  # Ajouter les tokens du mot-clé au total
+                )
 
         # Ajouter le dernier chunk si nécessaire
         if current_chunk:
-            chunks.append({"weighted_objects": current_chunk, "category_number": LLMCategoryRequest["category_number"]})
+            chunks.append(
+                {
+                    "weighted_objects": current_chunk,
+                    "category_number": LLMCategoryRequest["category_number"],
+                }
+            )
 
         print("Keywords chunked.")
         return chunks
 
-    def request_object_categorization(self, objects: LLMCategoryRequestFormat) -> list[DbWeightedCategory]:
+    def request_object_categorization(
+        self, objects: LLMCategoryRequestFormat
+    ) -> list[DbWeightedCategory]:
         """
         Request the LLM to categorize the weighted objects.
 
         Args:
             objects (LLMCategoryRequestFormat): The weighted objects to categorize.
-        
+
         Returns:
             list[DbWeightedCategory]: The categorized weighted objects.
         """
@@ -184,12 +214,19 @@ class LLMAgent:
             print("Erreur de format JSON dans le contenu de la réponse, chunk ignoré.")
             return []  # Retourner une liste vide ou gérer selon vos besoins
 
-
-        print("Somme des poids des mots-clés d'entrée : ", self.sum_keyword_weights(objects["weighted_objects"]))
-        print("Somme des poids des catégories de sortie : ", self.sum_keyword_weights(return_value))
+        print(
+            "Somme des poids des mots-clés d'entrée : ",
+            self.sum_keyword_weights(objects["weighted_objects"]),
+        )
+        print(
+            "Somme des poids des catégories de sortie : ",
+            self.sum_keyword_weights(return_value),
+        )
 
         return return_value
-    
-    def sum_keyword_weights(self, objects: list[DbWeightedKeyword] | list[DbWeightedCategory]) -> int:
-        total: int = sum(item['Weight'] for item in objects if 'Weight' in item)
+
+    def sum_keyword_weights(
+        self, objects: list[DbWeightedKeyword] | list[DbWeightedCategory]
+    ) -> int:
+        total: int = sum(item["Weight"] for item in objects if "Weight" in item)
         return total

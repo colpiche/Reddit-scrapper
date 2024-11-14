@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TypedDict, NotRequired
+from typing import NotRequired, TypedDict
 
 """
 This module defines the TypedDicts used to represent the different types of data stored in the database.
@@ -16,6 +16,7 @@ class DbUser(TypedDict):
         Genre (Optional[str]): The genre of the user. This field is optional and can be None.
         Age (Optional[int]): The age of the user. This field is optional and can be None.
     """
+
     Id: str
     Name: str
     Genre: NotRequired[str | None]
@@ -37,6 +38,7 @@ class DbSubmission(TypedDict):
         Keywords (Optional[list[str]]): A list of keywords describing the submission. This field is optional and can be None.
         Topic (Optional[str]): The topic of the submission. This field is optional and can be None.
     """
+
     Id: str
     Author_id: str
     Created: datetime
@@ -60,12 +62,14 @@ class DbComment(TypedDict):
         Submission_id (str): The identifier of the submission to which the comment belongs.
         Body (str): The body of the comment.
     """
+
     Id: str
     Author_id: str
     Created: datetime
     Parent_id: str
     Submission_id: str
     Body: str
+
 
 class DbWeightedKeyword(TypedDict):
     """
@@ -75,8 +79,10 @@ class DbWeightedKeyword(TypedDict):
         Keyword (str): The keyword.
         Weight (int): The weight of the keyword.
     """
+
     Keyword: str
     Weight: int
+
 
 class DbWeightedCategory(TypedDict):
     """
@@ -86,5 +92,6 @@ class DbWeightedCategory(TypedDict):
         Category (str): The category.
         Weight (int): The weight of the category.
     """
+
     Category: str
     Weight: int

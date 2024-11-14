@@ -5,11 +5,11 @@ from LLM.Types import LLMCategoryRequestFormat, LLMKeywordsTopicResponseFormat
 import os
 import sqlite3
 from .Types import (
+    DbComment,
+    DbSubmission,
+    DbUser,
     DbWeightedCategory,
     DbWeightedKeyword,
-    DbUser,
-    DbSubmission,
-    DbComment,
 )
 
 
