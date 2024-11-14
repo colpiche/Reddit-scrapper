@@ -1,10 +1,10 @@
 from collections import Counter
 from datetime import datetime
 from LLM.Agent import LLMAgent
-from LLM.Types import LLMResponseFormat
+from LLM.Types import LLMCategoryRequestFormat, LLMKeywordsTopicResponseFormat
 import os
 import sqlite3
-from .Types import DbUser, DbSubmission, DbComment
+from .Types import DbCategoryWeight, DbKeywordWeight, DbUser, DbSubmission, DbComment
 
 
 class DatabaseManager:
@@ -258,7 +258,7 @@ class DatabaseManager:
             # Fermeture de la connexion
             connexion.close()
     
-    def update_keywords_and_topic(self, dict: DbSubmission, LLMResponse: LLMResponseFormat):
+    def update_keywords_and_topic(self, dict: DbSubmission, LLMResponse: LLMKeywordsTopicResponseFormat):
         """
         Met à jour les mots-clés et le sujet d'une soumission.
 
@@ -498,6 +498,65 @@ class DatabaseManager:
 
         except sqlite3.Error as e:
             print(f"Erreur lors du calcul des occurrences des mots-clés : {e}")
+
+        finally:
+            connexion.close()
+    
+    def categorize_keywords(self, chatgpt: LLMAgent, category_number: int):
+        """
+        Récupère les mots-clés et leur fréquence depuis la table KeywordWeight
+        et les envoie à la fonction request_keyword_categorization de LLM pour les catégoriser.
+
+        :param LLMAgent: LLMAgent - L'agent LLM utilisé pour catégoriser les mots-clés.
+        :return: list[DbCategoryWeight] - Liste des catégories des mots-clés obtenus de la réponse de LLM.
+        """
+        
+        try:
+            # Connexion à la base de données
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
+            curseur: sqlite3.Cursor = connexion.cursor()
+
+            # Récupération des mots-clés et de leur fréquence depuis KeywordWeight
+            curseur.execute("SELECT Keyword, Weight FROM KeywordWeight")
+            rows = curseur.fetchall()
+
+            # Formatage des mots-clés pour la requête LLM
+            # keywords = {row[0]: row[1] for row in rows}
+            keywords: list[DbKeywordWeight] = [{"Keyword": row[0], "Weight": row[1]} for row in rows]
+
+            # Préparation des données pour la requête LLM
+            keyword_request = LLMCategoryRequestFormat(
+                keyword=keywords,
+                category_number=category_number
+            )
+
+            # Envoi à la méthode request_keyword_categorization de l'agent LLM
+            categories_response: list[DbCategoryWeight] = chatgpt.request_keyword_categorization(keyword_request)
+
+            # Création de la table CategoryWeight si elle n'existe pas
+            curseur.execute("""
+                CREATE TABLE IF NOT EXISTS CategoryWeight (
+                    Category TEXT PRIMARY KEY,
+                    Weight INTEGER NOT NULL
+                );
+            """)
+
+            # Vider la table CategoryWeight si elle existe déjà
+            curseur.execute("DELETE FROM CategoryWeight")
+
+            # Insérer les mots-clés et leurs occurrences dans la table CategoryWeight
+            for category in categories_response:
+                curseur.execute("""
+                    INSERT INTO CategoryWeight (Category, Weight)
+                    VALUES (?, ?)
+                """, (category["Category"], category["Weight"]))
+            
+            # Sauvegarder les modifications
+            connexion.commit()
+            print("Table CategoryWeight mise à jour avec les catégories des mots-clés.")
+
+        except sqlite3.Error as e:
+            print(f"Erreur lors de la récupération ou de la catégorisation des mots-clés : {e}")
 
         finally:
             connexion.close()

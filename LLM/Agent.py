@@ -1,8 +1,8 @@
-from Database.Types import DbSubmission
+from Database.Types import DbCategoryWeight, DbSubmission
 import json
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from .Types import LLMResponseFormat
+from .Types import LLMCategoryRequestFormat, LLMKeywordsTopicResponseFormat
 import os
 import re
 
@@ -26,6 +26,16 @@ class LLMAgent:
         Si tu n'es pas capable de trouver 3 mots-clés ou une thématique, répond
         par un JSON vide : {"keywords": [], "topic": ""}
     """
+    _keyword_categoryzation_system_prompt: str = """
+        Voici une liste de mots-clés pondérés. Classe-les catégories en prenant
+        en compte les poids des mots-clés : chaque catégorie doit donc avoir un poids
+        qui lui est associé, qui est la somme des poids des mots-clés qui la composent.
+        Le nombre de catégories est indiqué dans le JSON que tu recevras. La réponse
+        doit être formattée en JSON selon le format suivant :
+        {[{Category: "Topic1", Weight: 0}, {Category: "Topic2", Weight: 0}, ...]}
+        La réponse doit contenir uniquement ce JSON et rien d'autre, pas d'explication,
+        pas de commentaire, pas de texte supplémentaire.
+    """
 
     def __init__(self):
         self._model: AzureChatOpenAI = AzureChatOpenAI(
@@ -34,7 +44,7 @@ class LLMAgent:
             api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
         )
 
-    def request_keywords_and_topic(self, submission: DbSubmission) -> LLMResponseFormat:
+    def request_keywords_and_topic(self, submission: DbSubmission) -> LLMKeywordsTopicResponseFormat:
         prompt: dict[str, str] = {
             "system": self._keywords_and_topic_system_prompt,
             "payload": f'Titre :\n{submission["Title"]}\n\nCorps du texte :\n{submission["Body"]}',
@@ -56,3 +66,18 @@ class LLMAgent:
         else:
             print("La chaîne JSON ne correspond pas à la structure attendue.")
             return {"keywords": [], "topic": ""}
+    
+    def request_keyword_categorization(self, keywords: LLMCategoryRequestFormat) -> list[DbCategoryWeight]:
+        prompt: dict[str, str] = {
+            "system": self._keyword_categoryzation_system_prompt,
+            "payload": json.dumps(keywords),
+        }
+
+        messages: list[SystemMessage | HumanMessage] = [
+            SystemMessage(content=prompt["system"]),
+            HumanMessage(content=prompt["payload"]),
+        ]
+
+        response: BaseMessage = self._model.invoke(messages)
+
+        return json.loads(str(response.content))
