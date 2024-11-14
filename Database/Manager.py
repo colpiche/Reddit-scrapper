@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import datetime
 from LLM.Types import LLMResponseFormat
 import os
@@ -417,3 +418,53 @@ class DatabaseManager:
 
         # Retourner None si la commande n'est pas un SELECT
         return None
+    
+    def calculate_keyword_occurrences(self):
+        """
+        Calcule les occurrences de chaque mot-clé dans la table Submission,
+        et enregistre les résultats dans une nouvelle table KeywordWeight.
+        """
+        
+        # Connexion à la base de données
+        connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
+        curseur: sqlite3.Cursor = connexion.cursor()
+
+        try:
+            # Création de la table KeywordWeight si elle n'existe pas
+            curseur.execute("""
+                CREATE TABLE IF NOT EXISTS KeywordWeight (
+                    Keyword TEXT PRIMARY KEY,
+                    Weight INTEGER NOT NULL
+                );
+            """)
+
+            # Vider la table KeywordWeight si elle existe déjà
+            curseur.execute("DELETE FROM KeywordWeight")
+
+            # Récupération de tous les mots-clés dans la table Submission
+            curseur.execute("SELECT Keywords FROM Submission")
+            rows = curseur.fetchall()
+
+            # Compter les occurrences des mots-clés
+            keyword_counter = Counter()
+            for row in rows:
+                if row[0]:  # S'assurer que Keywords n'est pas NULL
+                    keywords = row[0].split(',')  # Supposer que les mots-clés sont séparés par des virgules
+                    keyword_counter.update(keywords)
+
+            # Insérer les mots-clés et leurs occurrences dans la table KeywordWeight
+            for keyword, weight in keyword_counter.items():
+                curseur.execute("""
+                    INSERT INTO KeywordWeight (Keyword, Weight)
+                    VALUES (?, ?)
+                """, (keyword, weight))
+
+            # Sauvegarder les modifications
+            connexion.commit()
+            print("Table KeywordWeight mise à jour avec les occurrences des mots-clés.")
+
+        except sqlite3.Error as e:
+            print(f"Erreur lors du calcul des occurrences des mots-clés : {e}")
+
+        finally:
+            connexion.close()
