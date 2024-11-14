@@ -1,4 +1,5 @@
 from datetime import datetime
+from LLM.Types import LLMResponseFormat
 import os
 import sqlite3
 from .Types import DbUser, DbSubmission, DbComment
@@ -235,6 +236,44 @@ class DatabaseManager:
 
                 except sqlite3.Error as e:
                     print(f"Commentaire '{comment['Id']}' - Une erreur est survenue lors de l'ajout du commentaire : {e}")
+
+        except sqlite3.Error as e:
+            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
+
+        finally:
+            # Fermeture de la connexion
+            connexion.close()
+    
+    def update_keywords_and_topic(self, dict: DbSubmission, LLMResponse: LLMResponseFormat):
+        """
+        Met à jour les mots-clés et le sujet d'une soumission.
+
+        :param text: Submission - L'objet soumission à mettre à jour.
+        :param LLMResponse: LLMResponseFormat - La réponse générée par le modèle LLM.
+        """
+
+        try:
+            # Connexion à la base de données
+            connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
+            curseur: sqlite3.Cursor = connexion.cursor()
+
+            # Formatage de la liste de mots-clés en une chaîne de caractères séparée par des virgules
+            formatted_keywords: str = ','.join(LLMResponse["keywords"])
+
+            # Mise à jour des mots-clés et du sujet dans la table correspondante
+            curseur.execute("""
+                UPDATE Submission
+                SET Keywords = ?, Topic = ?
+                WHERE Id = ?
+            """, (
+                formatted_keywords,
+                LLMResponse["topic"],
+                dict["Id"]
+            ))
+
+            # Enregistrement des changements
+            connexion.commit()
+            print(f"Mots-clés et sujet mis à jour pour '{dict['Id']}' avec succès.")
 
         except sqlite3.Error as e:
             print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
