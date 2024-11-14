@@ -6,7 +6,7 @@ This module defines the TypedDicts used to represent the different types of data
 """
 
 
-class User(TypedDict):
+class DbUser(TypedDict):
     """
     This module defines the User TypedDict for representing user information in the database.
 
@@ -22,7 +22,7 @@ class User(TypedDict):
     Age: NotRequired[int | None]
 
 
-class Submission(TypedDict):
+class DbSubmission(TypedDict):
     """
     This module defines the Submission TypedDict for representing submission information in the database.
 
@@ -48,7 +48,7 @@ class Submission(TypedDict):
     Topic: NotRequired[str | None]
 
 
-class Comment(TypedDict):
+class DbComment(TypedDict):
     """
     This module defines the Comment TypedDict for representing comment information in the database.
 

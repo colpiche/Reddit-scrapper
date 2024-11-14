@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 import sqlite3
-from .Types import User, Submission, Comment
+from .Types import DbUser, DbSubmission, DbComment
 
 
 class DatabaseManager:
@@ -92,7 +92,7 @@ class DatabaseManager:
                 connexion.close()
                 print("Connexion fermée.")
 
-    def add_users(self, users: list[User]):
+    def add_users(self, users: list[DbUser]):
         """
         Ajoute une liste d'utilisateurs dans la table User.
 
@@ -141,7 +141,7 @@ class DatabaseManager:
             # Fermeture de la connexion
             connexion.close()
 
-    def add_submissions(self, submissions: list[Submission]):
+    def add_submissions(self, submissions: list[DbSubmission]):
         """
         Ajoute une liste de soumissions dans la table Submission.
 
@@ -197,7 +197,7 @@ class DatabaseManager:
             # Fermeture de la connexion
             connexion.close()
 
-    def add_comments(self, comments: list[Comment]):
+    def add_comments(self, comments: list[DbComment]):
         """
         Ajoute une liste de commentaires dans la table Comment.
 
@@ -243,9 +243,9 @@ class DatabaseManager:
             # Fermeture de la connexion
             connexion.close()
 
-    def get_all_users(self) -> list[User]:
+    def get_all_users(self) -> list[DbUser]:
         """Récupère tous les utilisateurs de la table User."""
-        users: list[User] = []
+        users: list[DbUser] = []
 
         try:
             # Connexion à la base de données
@@ -258,7 +258,7 @@ class DatabaseManager:
 
             # Conversion des résultats en liste d'objets User
             for row in rows:
-                user = User(
+                user = DbUser(
                     Id=row[0],
                     Name=row[1],
                     Genre=row[2],
@@ -274,9 +274,9 @@ class DatabaseManager:
 
         return users
 
-    def get_all_submissions(self) -> list[Submission]:
+    def get_all_submissions(self) -> list[DbSubmission]:
         """Récupère toutes les soumissions de la table Submission."""
-        submissions: list[Submission] = []
+        submissions: list[DbSubmission] = []
 
         try:
             # Connexion à la base de données
@@ -289,7 +289,7 @@ class DatabaseManager:
 
             # Conversion des résultats en liste d'objets Submission
             for row in rows:
-                submission = Submission(
+                submission = DbSubmission(
                     Id=row[0],
                     Author_id=row[1],
                     Created=datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S.%f'),
@@ -310,9 +310,9 @@ class DatabaseManager:
 
         return submissions
 
-    def get_all_comments(self) -> list[Comment]:
+    def get_all_comments(self) -> list[DbComment]:
         """Récupère tous les commentaires de la table Comment."""
-        comments: list[Comment] = []
+        comments: list[DbComment] = []
 
         try:
             # Connexion à la base de données
@@ -325,7 +325,7 @@ class DatabaseManager:
 
             # Conversion des résultats en liste d'objets Comment
             for row in rows:
-                comment = Comment(
+                comment = DbComment(
                     Id=row[0],
                     Author_id=row[1],
                     Created=datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S.%f'),
