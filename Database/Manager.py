@@ -7,8 +7,7 @@ from .Types import DbUser, DbSubmission, DbComment
 class DatabaseManager:
     """Gestionnaire de base de données"""
 
-    # Définir le chemin vers database.db dans le dossier du module
-    _filepath: str = os.path.join(os.path.dirname(__file__), "database.db")
+    _filepath: str = ""
 
     # Schéma de la table User
     _table_user: str = """
@@ -50,7 +49,9 @@ class DatabaseManager:
     );
     """
 
-    def __init__(self) -> None:
+    def __init__(self, name: str) -> None:
+        # Définir le chemin vers database.db dans le dossier du module
+        self._filepath = os.path.join(os.path.dirname(__file__), f"{name}.db")
         pass
 
     def _format_date(self, date: datetime) -> str:
