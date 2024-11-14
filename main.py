@@ -1,5 +1,6 @@
 import praw
 import os
+import time
 from dotenv import load_dotenv
 from praw.models import Submission, Comment, Redditor
 from Database.Manager import DatabaseManager
@@ -20,6 +21,7 @@ reddit = praw.Reddit(
     password=USER_PASSWORD,
     user_agent=USER_AGENT,
     username=USERNAME,
+    ratelimit_seconds=2
 )
 
 database = DatabaseManager(name='askfrance_new')
@@ -29,53 +31,61 @@ users_to_add: list[DbUser] = []
 submissions_to_add: list[DbSubmission] = []
 comments_to_add: list[DbComment] = []
 
-submissions: list[Submission] = reddit.subreddit("AskFrance").new(limit=100)
+submissions: list[Submission] = reddit.subreddit("AskFrance").new(limit=1000)
 
 for i, submission in enumerate(submissions):
-    print(f"Submission-{i:03}: {submission.title}")
-    submissions_to_add.append(
-        DbSubmission(
-        Id=submission.id,
-        Author_id=submission.author.id,
-        Created=datetime.fromtimestamp(submission.created_utc),  # Exemple de date et heure
-        Sub_id=submission.subreddit.id,
-        Url=submission.url,
-        Title=submission.title,
-        Body=submission.selftext,
-        Keywords=[],  # Liste de mots-clés
-        Topic=""
-    ))
 
-    users_to_add.append(DbUser(Id=submission.author.id, Name=submission.author.name))
+    try:
+        print(f"Submission-{i:03}: {submission.title}")
+        database.add_submissions([DbSubmission(
+            Id=submission.id,
+            Author_id=submission.author.id if submission.author is not None else "None",
+            Created=datetime.fromtimestamp(submission.created_utc),  # Exemple de date et heure
+            Sub_id=submission.subreddit.id,
+            Url=submission.url,
+            Title=submission.title,
+            Body=submission.selftext,
+            Keywords=[],  # Liste de mots-clés
+            Topic=""
+        )])
 
-    submission.comments.replace_more(limit=None)
+        # time.sleep(0.65)
+        if submission.author is not None:
+            users_to_add.append(DbUser(Id=submission.author.id, Name=submission.author.name))
+    except Exception as e:
+        pass
+    finally:
+        continue
 
-    comments = submission.comments.list()
+    # submission.comments.replace_more(limit=None)
 
-    for comment in comments:
-        if isinstance(comment, Comment):
-            if comment.author == None:
-                comments_to_add.append(
-                    DbComment(
-                    Id=comment.id,
-                    Author_id='[Removed]',
-                    Created=datetime.fromtimestamp(comment.created_utc),
-                    Parent_id=comment.parent_id,
-                    Submission_id=comment.link_id,
-                    Body='[Removed]'
-                ))
-            else :
-                comments_to_add.append(
-                    DbComment(
-                    Id=comment.id,
-                    Author_id=comment.author.id,
-                    Created=datetime.fromtimestamp(comment.created_utc),
-                    Parent_id=comment.parent_id,
-                    Submission_id=comment.link_id,
-                    Body=comment.body
-                ))
-            if comment.author != None:
-                users_to_add.append(DbUser(Id=comment.author.id, Name=comment.author.name))
+    # comments = submission.comments.list()
+
+    # for comment in comments:
+    #     if isinstance(comment, Comment):
+    #         if comment.author is None or not hasattr(comment.author, 'id'):
+    #             comments_to_add.append(
+    #                 DbComment(
+    #                 Id=comment.id,
+    #                 Author_id='[Removed]',
+    #                 Created=datetime.fromtimestamp(comment.created_utc),
+    #                 Parent_id=comment.parent_id,
+    #                 Submission_id=comment.link_id,
+    #                 Body='[Removed]'
+    #             ))
+    #         else :
+    #             comments_to_add.append(
+    #                 DbComment(
+    #                 Id=comment.id,
+    #                 Author_id=comment.author.id,
+    #                 Created=datetime.fromtimestamp(comment.created_utc),
+    #                 Parent_id=comment.parent_id,
+    #                 Submission_id=comment.link_id,
+    #                 Body=comment.body
+    #             ))
+    #         if comment.author is not None and hasattr(comment.author, 'id'):
+    #             users_to_add.append(DbUser(Id=comment.author.id, Name=comment.author.name))
+    #     time.sleep(0.65)
 
 
 filtered_submissions: list[DbSubmission] = []
@@ -102,8 +112,8 @@ for user in users_to_add:
         filtered_users.append(user)
 
 database.add_submissions(filtered_submissions)
-database.add_comments(filtered_comments)
-database.add_users(filtered_users)
+# database.add_comments(filtered_comments)
+# database.add_users(filtered_users)
 
 # # Récupérer tous les utilisateurs
 # users = database.get_all_users()
