@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import datetime
+from LLM.Agent import LLMAgent
 from LLM.Types import LLMResponseFormat
 import os
 import sqlite3
@@ -60,6 +61,17 @@ class DatabaseManager:
         """Formatage d'une date au format SQLite"""
 
         return date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]  # On enlève les derniers microsecondes non nécessaires
+    
+    def _has_values_for_keywords_and_topic(self, submission: DbSubmission) -> bool:
+        """"Vérifie si les valeurs de Keywords et Topic sont présentes dans une soumission."""
+
+        # Vérifie que Keywords n'est pas None ou une liste vide
+        keywords_present = submission.get('Keywords') is not None and bool(submission.get('Keywords'))
+
+        # Vérifie que Topic n'est pas None ou une chaîne vide
+        topic_present = submission.get('Topic') is not None and submission.get('Topic') != ""
+    
+        return keywords_present and topic_present
 
     def create(self):
         """Création de la base de données avec gestion des erreurs"""
@@ -283,6 +295,26 @@ class DatabaseManager:
         finally:
             # Fermeture de la connexion
             connexion.close()
+
+    def update_all_keywords_and_topic(self, LLMAgent: LLMAgent, force_update: bool = False):
+        """
+        Met à jour les mots-clés et le sujet de toutes les soumissions dans la table Submission.
+
+        :param LLMAgent: LLMAgent - L'agent LLM utilisé pour générer les mots-clés et le sujet.
+        :param force_update: bool - Indique si on doit écraser les valeurs existantes (par défaut False).
+        """
+
+        # Récupération de toutes les soumissions
+        submissions = self.get_all_submissions()
+
+        for submission in submissions:
+            if not force_update and self._has_values_for_keywords_and_topic(submission):
+                print(f"Soumission '{submission['Id']}' déjà traitée.")
+                continue
+
+            # Génération des mots-clés et du sujet pour chaque soumission
+            LLMResponse = LLMAgent.request_keywords_and_topic(submission)
+            self.update_keywords_and_topic(submission, LLMResponse)
 
     def get_all_users(self) -> list[DbUser]:
         """Récupère tous les utilisateurs de la table User."""
