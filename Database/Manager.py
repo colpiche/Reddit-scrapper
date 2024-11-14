@@ -1,10 +1,16 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime
 from LLM.Agent import LLMAgent
 from LLM.Types import LLMCategoryRequestFormat, LLMKeywordsTopicResponseFormat
 import os
 import sqlite3
-from .Types import DbCategoryWeight, DbKeywordWeight, DbUser, DbSubmission, DbComment
+from .Types import (
+    DbWeightedCategory,
+    DbWeightedKeyword,
+    DbUser,
+    DbSubmission,
+    DbComment,
+)
 
 
 class DatabaseManager:
@@ -60,17 +66,23 @@ class DatabaseManager:
     def _format_date(self, date: datetime) -> str:
         """Formatage d'une date au format SQLite"""
 
-        return date.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]  # On enlève les derniers microsecondes non nécessaires
-    
+        return date.strftime("%Y-%m-%d %H:%M:%S.%f")[
+            :-3
+        ]  # On enlève les derniers microsecondes non nécessaires
+
     def _has_values_for_keywords_and_topic(self, submission: DbSubmission) -> bool:
-        """"Vérifie si les valeurs de Keywords et Topic sont présentes dans une soumission."""
+        """ "Vérifie si les valeurs de Keywords et Topic sont présentes dans une soumission."""
 
         # Vérifie que Keywords n'est pas None ou une liste vide
-        keywords_present = submission.get('Keywords') is not None and bool(submission.get('Keywords'))
+        keywords_present = submission.get("Keywords") is not None and bool(
+            submission.get("Keywords")
+        )
 
         # Vérifie que Topic n'est pas None ou une chaîne vide
-        topic_present = submission.get('Topic') is not None and submission.get('Topic') != ""
-    
+        topic_present = (
+            submission.get("Topic") is not None and submission.get("Topic") != ""
+        )
+
         return keywords_present and topic_present
 
     def create(self):
@@ -103,7 +115,7 @@ class DatabaseManager:
 
         finally:
             # Fermeture de la connexion, même en cas d'erreur
-            if 'connexion' in locals():
+            if "connexion" in locals():
                 connexion.close()
                 print("Connexion fermée.")
 
@@ -114,7 +126,11 @@ class DatabaseManager:
         :param users: list[User] - Une liste d'objets utilisateur
         """
 
-        valid_genres = {"M", "F", "NB"}  # Ensemble des valeurs valides pour le champ Genre
+        valid_genres = {
+            "M",
+            "F",
+            "NB",
+        }  # Ensemble des valeurs valides pour le champ Genre
 
         try:
             # Connexion à la base de données
@@ -127,30 +143,45 @@ class DatabaseManager:
                     # Validation de la valeur du champ Genre
                     genre = user.get("Genre")
                     if genre is not None and genre not in valid_genres:
-                        print(f"Utilisateur '{user['Id']}' - Valeur de genre invalide : '{genre}' (doit être 'M', 'F' ou 'NB')")
+                        print(
+                            f"Utilisateur '{user['Id']}' - Valeur de genre invalide : '{genre}' (doit être 'M', 'F' ou 'NB')"
+                        )
                         continue  # Passe à l'utilisateur suivant sans insertion
 
-                    curseur.execute("""
+                    curseur.execute(
+                        """
                         INSERT INTO User (Id, Name, Genre, Age)
                         VALUES (?, ?, ?, ?)
-                    """, (
-                        user["Id"],
-                        user["Name"],
-                        user.get("Genre"),  # Si "Genre" n'est pas spécifié, cela renverra None
-                        user.get("Age")     # Si "Age" n'est pas spécifié, cela renverra None
-                    ))
+                    """,
+                        (
+                            user["Id"],
+                            user["Name"],
+                            user.get(
+                                "Genre"
+                            ),  # Si "Genre" n'est pas spécifié, cela renverra None
+                            user.get(
+                                "Age"
+                            ),  # Si "Age" n'est pas spécifié, cela renverra None
+                        ),
+                    )
                     # Enregistrement des changements pour chaque utilisateur
                     connexion.commit()
                     print(f"Utilisateur '{user['Id']}' ajouté avec succès.")
 
                 except sqlite3.IntegrityError as e:
-                    print(f"Utilisateur '{user['Id']}' - Erreur d'intégrité lors de l'ajout de l'utilisateur : {e}")
+                    print(
+                        f"Utilisateur '{user['Id']}' - Erreur d'intégrité lors de l'ajout de l'utilisateur : {e}"
+                    )
 
                 except sqlite3.Error as e:
-                    print(f"Utilisateur '{user['Id']}' - Une erreur est survenue lors de l'ajout de l'utilisateur : {e}")
+                    print(
+                        f"Utilisateur '{user['Id']}' - Une erreur est survenue lors de l'ajout de l'utilisateur : {e}"
+                    )
 
         except sqlite3.Error as e:
-            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
+            print(
+                f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}"
+            )
 
         finally:
             # Fermeture de la connexion
@@ -175,38 +206,49 @@ class DatabaseManager:
                     formatted_keywords: str | None = None
                     keywords = submission.get("Keywords")
                     if keywords:
-                        formatted_keywords = ','.join(keywords)
+                        formatted_keywords = ",".join(keywords)
 
                     # Formatage de la date 'Created' en texte au format SQLite
                     formatted_created = self._format_date(submission["Created"])
 
-                    curseur.execute("""
+                    curseur.execute(
+                        """
                         INSERT INTO Submission (Id, Author_id, Created, Sub_id, Url, Title, Body, Keywords, Topic)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        submission["Id"],
-                        submission["Author_id"],
-                        formatted_created,
-                        submission["Sub_id"],
-                        submission["Url"],
-                        submission["Title"],
-                        submission["Body"],
-                        formatted_keywords,
-                        submission.get("Topic")  # Si 'Topic' n'est pas spécifié, cela renverra None
-                    ))
+                    """,
+                        (
+                            submission["Id"],
+                            submission["Author_id"],
+                            formatted_created,
+                            submission["Sub_id"],
+                            submission["Url"],
+                            submission["Title"],
+                            submission["Body"],
+                            formatted_keywords,
+                            submission.get(
+                                "Topic"
+                            ),  # Si 'Topic' n'est pas spécifié, cela renverra None
+                        ),
+                    )
 
                     # Enregistrement des changements pour chaque soumission
                     connexion.commit()
                     print(f"Soumission '{submission['Id']}' ajoutée avec succès.")
 
                 except sqlite3.IntegrityError as e:
-                    print(f"Soumission '{submission['Id']}' - Erreur d'intégrité lors de l'ajout de la soumission : {e}")
+                    print(
+                        f"Soumission '{submission['Id']}' - Erreur d'intégrité lors de l'ajout de la soumission : {e}"
+                    )
 
                 except sqlite3.Error as e:
-                    print(f"Soumission '{submission['Id']}' - Une erreur est survenue lors de l'ajout de la soumission : {e}")
+                    print(
+                        f"Soumission '{submission['Id']}' - Une erreur est survenue lors de l'ajout de la soumission : {e}"
+                    )
 
         except sqlite3.Error as e:
-            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
+            print(
+                f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}"
+            )
 
         finally:
             # Fermeture de la connexion
@@ -229,36 +271,47 @@ class DatabaseManager:
                 try:
                     formatted_created = self._format_date(comment["Created"])
 
-                    curseur.execute("""
+                    curseur.execute(
+                        """
                         INSERT INTO Comment (Id, Author_id, Created, Parent_id, Submission_id, Body)
                         VALUES (?, ?, ?, ?, ?, ?)
-                    """, (
-                        comment["Id"],
-                        comment["Author_id"],
-                        formatted_created,
-                        comment["Parent_id"],
-                        comment["Submission_id"],
-                        comment["Body"]
-                    ))
+                    """,
+                        (
+                            comment["Id"],
+                            comment["Author_id"],
+                            formatted_created,
+                            comment["Parent_id"],
+                            comment["Submission_id"],
+                            comment["Body"],
+                        ),
+                    )
 
                     # Enregistrement des changements pour chaque commentaire
                     connexion.commit()
                     print(f"Commentaire '{comment['Id']}' ajouté avec succès.")
 
                 except sqlite3.IntegrityError as e:
-                    print(f"Commentaire '{comment['Id']}' - Erreur d'intégrité lors de l'ajout du commentaire : {e}")
+                    print(
+                        f"Commentaire '{comment['Id']}' - Erreur d'intégrité lors de l'ajout du commentaire : {e}"
+                    )
 
                 except sqlite3.Error as e:
-                    print(f"Commentaire '{comment['Id']}' - Une erreur est survenue lors de l'ajout du commentaire : {e}")
+                    print(
+                        f"Commentaire '{comment['Id']}' - Une erreur est survenue lors de l'ajout du commentaire : {e}"
+                    )
 
         except sqlite3.Error as e:
-            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
+            print(
+                f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}"
+            )
 
         finally:
             # Fermeture de la connexion
             connexion.close()
-    
-    def update_keywords_and_topic(self, dict: DbSubmission, LLMResponse: LLMKeywordsTopicResponseFormat):
+
+    def update_keywords_and_topic(
+        self, dict: DbSubmission, LLMResponse: LLMKeywordsTopicResponseFormat
+    ):
         """
         Met à jour les mots-clés et le sujet d'une soumission.
 
@@ -272,31 +325,34 @@ class DatabaseManager:
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Formatage de la liste de mots-clés en une chaîne de caractères séparée par des virgules
-            formatted_keywords: str = ','.join(LLMResponse["keywords"])
+            formatted_keywords: str = ",".join(LLMResponse["keywords"])
 
             # Mise à jour des mots-clés et du sujet dans la table correspondante
-            curseur.execute("""
+            curseur.execute(
+                """
                 UPDATE Submission
                 SET Keywords = ?, Topic = ?
                 WHERE Id = ?
-            """, (
-                formatted_keywords,
-                LLMResponse["topic"],
-                dict["Id"]
-            ))
+            """,
+                (formatted_keywords, LLMResponse["topic"], dict["Id"]),
+            )
 
             # Enregistrement des changements
             connexion.commit()
             print(f"Mots-clés et sujet mis à jour pour '{dict['Id']}' avec succès.")
 
         except sqlite3.Error as e:
-            print(f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}")
+            print(
+                f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}"
+            )
 
         finally:
             # Fermeture de la connexion
             connexion.close()
 
-    def update_all_keywords_and_topic(self, LLMAgent: LLMAgent, force_update: bool = False):
+    def update_all_keywords_and_topic(
+        self, LLMAgent: LLMAgent, force_update: bool = False
+    ):
         """
         Met à jour les mots-clés et le sujet de toutes les soumissions dans la table Submission.
 
@@ -317,7 +373,12 @@ class DatabaseManager:
             self.update_keywords_and_topic(submission, LLMResponse)
 
     def get_all_users(self) -> list[DbUser]:
-        """Récupère tous les utilisateurs de la table User."""
+        """
+        Récupère tous les utilisateurs de la table User.
+
+        :return: list[User] - La liste de tous les utilisateurs.
+        """
+
         users: list[DbUser] = []
 
         try:
@@ -331,12 +392,7 @@ class DatabaseManager:
 
             # Conversion des résultats en liste d'objets User
             for row in rows:
-                user = DbUser(
-                    Id=row[0],
-                    Name=row[1],
-                    Genre=row[2],
-                    Age=row[3]
-                )
+                user = DbUser(Id=row[0], Name=row[1], Genre=row[2], Age=row[3])
                 users.append(user)
 
         except sqlite3.Error as e:
@@ -348,7 +404,12 @@ class DatabaseManager:
         return users
 
     def get_all_submissions(self) -> list[DbSubmission]:
-        """Récupère toutes les soumissions de la table Submission."""
+        """
+        Récupère toutes les soumissions de la table Submission.
+
+        :return: list[Submission] - La liste de toutes les soumissions.
+        """
+
         submissions: list[DbSubmission] = []
 
         try:
@@ -357,7 +418,9 @@ class DatabaseManager:
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Exécution de la requête pour récupérer toutes les soumissions
-            curseur.execute("SELECT Id, Author_id, Created, Sub_id, Url, Title, Body, Keywords, Topic FROM Submission")
+            curseur.execute(
+                "SELECT Id, Author_id, Created, Sub_id, Url, Title, Body, Keywords, Topic FROM Submission"
+            )
             rows = curseur.fetchall()
 
             # Conversion des résultats en liste d'objets Submission
@@ -365,13 +428,13 @@ class DatabaseManager:
                 submission = DbSubmission(
                     Id=row[0],
                     Author_id=row[1],
-                    Created=datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S.%f'),
+                    Created=datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f"),
                     Sub_id=row[3],
                     Url=row[4],
                     Title=row[5],
                     Body=row[6],
-                    Keywords=row[7].split(',') if row[7] else None,
-                    Topic=row[8]
+                    Keywords=row[7].split(",") if row[7] else None,
+                    Topic=row[8],
                 )
                 submissions.append(submission)
 
@@ -384,7 +447,12 @@ class DatabaseManager:
         return submissions
 
     def get_all_comments(self) -> list[DbComment]:
-        """Récupère tous les commentaires de la table Comment."""
+        """
+        Récupère tous les commentaires de la table Comment.
+
+        :return: list[Comment] - La liste de tous les commentaires.
+        """
+
         comments: list[DbComment] = []
 
         try:
@@ -393,7 +461,9 @@ class DatabaseManager:
             curseur: sqlite3.Cursor = connexion.cursor()
 
             # Exécution de la requête pour récupérer tous les commentaires
-            curseur.execute("SELECT Id, Author_id, Created, Parent_id, Submission_id, Body FROM Comment")
+            curseur.execute(
+                "SELECT Id, Author_id, Created, Parent_id, Submission_id, Body FROM Comment"
+            )
             rows = curseur.fetchall()
 
             # Conversion des résultats en liste d'objets Comment
@@ -401,10 +471,10 @@ class DatabaseManager:
                 comment = DbComment(
                     Id=row[0],
                     Author_id=row[1],
-                    Created=datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S.%f'),
+                    Created=datetime.strptime(row[2], "%Y-%m-%d %H:%M:%S.%f"),
                     Parent_id=row[3],
                     Submission_id=row[4],
-                    Body=row[5]
+                    Body=row[5],
                 )
                 comments.append(comment)
 
@@ -425,6 +495,7 @@ class DatabaseManager:
         :return: list[tuple] | None - Le résultat de la commande si c'est une requête SELECT,
                 sinon None.
         """
+
         try:
             # Connexion à la base de données
             connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
@@ -451,13 +522,13 @@ class DatabaseManager:
 
         # Retourner None si la commande n'est pas un SELECT
         return None
-    
+
     def calculate_keyword_occurrences(self):
         """
         Calcule les occurrences de chaque mot-clé dans la table Submission,
         et enregistre les résultats dans une nouvelle table KeywordWeight.
         """
-        
+
         # Connexion à la base de données
         connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
         curseur: sqlite3.Cursor = connexion.cursor()
@@ -482,15 +553,20 @@ class DatabaseManager:
             keyword_counter = Counter()
             for row in rows:
                 if row[0]:  # S'assurer que Keywords n'est pas NULL
-                    keywords = row[0].split(',')  # Supposer que les mots-clés sont séparés par des virgules
+                    keywords = row[0].split(
+                        ","
+                    )  # Supposer que les mots-clés sont séparés par des virgules
                     keyword_counter.update(keywords)
 
             # Insérer les mots-clés et leurs occurrences dans la table KeywordWeight
             for keyword, weight in keyword_counter.items():
-                curseur.execute("""
+                curseur.execute(
+                    """
                     INSERT INTO KeywordWeight (Keyword, Weight)
                     VALUES (?, ?)
-                """, (keyword, weight))
+                """,
+                    (keyword, weight),
+                )
 
             # Sauvegarder les modifications
             connexion.commit()
@@ -501,7 +577,7 @@ class DatabaseManager:
 
         finally:
             connexion.close()
-    
+
     def categorize_keywords(self, chatgpt: LLMAgent, category_number: int):
         """
         Récupère les mots-clés et leur fréquence depuis la table KeywordWeight
@@ -510,7 +586,7 @@ class DatabaseManager:
         :param LLMAgent: LLMAgent - L'agent LLM utilisé pour catégoriser les mots-clés.
         :return: list[DbCategoryWeight] - Liste des catégories des mots-clés obtenus de la réponse de LLM.
         """
-        
+
         try:
             # Connexion à la base de données
             connexion: sqlite3.Connection = sqlite3.connect(self._filepath)
@@ -522,16 +598,19 @@ class DatabaseManager:
 
             # Formatage des mots-clés pour la requête LLM
             # keywords = {row[0]: row[1] for row in rows}
-            keywords: list[DbKeywordWeight] = [{"Keyword": row[0], "Weight": row[1]} for row in rows]
+            keywords: list[DbWeightedKeyword] = [
+                {"Keyword": row[0], "Weight": row[1]} for row in rows
+            ]
 
             # Préparation des données pour la requête LLM
             keyword_request = LLMCategoryRequestFormat(
-                keyword=keywords,
-                category_number=category_number
+                weighted_objects=keywords, category_number=category_number
             )
 
             # Envoi à la méthode request_keyword_categorization de l'agent LLM
-            categories_response: list[DbCategoryWeight] = chatgpt.request_keyword_categorization(keyword_request)
+            categories_response: list[DbWeightedCategory] = chatgpt.categorize_keywords(
+                keyword_request
+            )
 
             # Création de la table CategoryWeight si elle n'existe pas
             curseur.execute("""
@@ -546,17 +625,171 @@ class DatabaseManager:
 
             # Insérer les mots-clés et leurs occurrences dans la table CategoryWeight
             for category in categories_response:
-                curseur.execute("""
+                curseur.execute(
+                    """
                     INSERT INTO CategoryWeight (Category, Weight)
                     VALUES (?, ?)
-                """, (category["Category"], category["Weight"]))
-            
+                """,
+                    (category["Category"], category["Weight"]),
+                )
+
             # Sauvegarder les modifications
             connexion.commit()
             print("Table CategoryWeight mise à jour avec les catégories des mots-clés.")
 
         except sqlite3.Error as e:
-            print(f"Erreur lors de la récupération ou de la catégorisation des mots-clés : {e}")
+            print(
+                f"Erreur lors de la récupération ou de la catégorisation des mots-clés : {e}"
+            )
 
         finally:
             connexion.close()
+
+    def calculate_submissions_count_by_date(self):
+        """
+        Cette fonction récupère les dates de soumission, compte les soumissions par jour
+        et insère ou met à jour les résultats dans une table SubmissionDate.
+        """
+
+        try:
+            # Connexion à la base de données
+            connexion = sqlite3.connect(self._filepath)
+            curseur = connexion.cursor()
+
+            # Récupérer toutes les soumissions
+            submissions: list[DbSubmission] = self.get_all_submissions()
+
+            # Créer un dictionnaire pour compter les soumissions par jour
+            date_count = defaultdict(int)
+
+            # Parcourir les soumissions et compter les soumissions par date
+            for submission in submissions:
+                # Extraire uniquement la date (en omettant l'heure)
+                date_only = submission[
+                    "Created"
+                ].date()  # Utilisation de .date() pour extraire la partie date
+
+                # Compter la soumission pour cette date
+                date_count[date_only] += 1
+
+            # Création de la table SubmissionDate si elle n'existe pas
+            curseur.execute("""
+            CREATE TABLE IF NOT EXISTS SubmissionDate (
+                Date TEXT PRIMARY KEY,
+                NbSubmissions INTEGER NOT NULL
+            )
+            """)
+
+            # Insérer ou mettre à jour les résultats dans la table SubmissionDate
+            for date, count in date_count.items():
+                try:
+                    curseur.execute(
+                        """
+                    INSERT INTO SubmissionDate (Date, NbSubmissions) 
+                    VALUES (?, ?)
+                    ON CONFLICT(Date) 
+                    DO UPDATE SET NbSubmissions = excluded.NbSubmissions
+                    """,
+                        (date, count),
+                    )
+                except sqlite3.IntegrityError as e:
+                    print(
+                        f"Erreur d'intégrité lors de l'insertion des données pour la date {date}: {e}"
+                    )
+                except sqlite3.Error as e:
+                    print(
+                        f"Une erreur est survenue lors de l'insertion des données pour la date {date}: {e}"
+                    )
+
+            # Validation des changements
+            connexion.commit()
+
+        except sqlite3.Error as e:
+            print(
+                f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}"
+            )
+
+        finally:
+            # Fermeture de la connexion
+            if connexion:
+                connexion.close()
+
+    def calculate_submissions_count_by_weekday(self):
+        """
+        Cette fonction récupère les dates de soumission, compte les soumissions par jour de la semaine,
+        et insère ou met à jour les résultats dans une table SubmissionWeekdayCount avec le jour de la semaine,
+        son ordre et le nombre de soumissions.
+        """
+
+        try:
+            # Connexion à la base de données
+            connexion = sqlite3.connect(self._filepath)
+            curseur = connexion.cursor()
+
+            # Récupérer toutes les soumissions
+            submissions: list[DbSubmission] = self.get_all_submissions()
+
+            # Créer un dictionnaire pour compter les soumissions par jour de la semaine
+            weekday_count = defaultdict(int)
+
+            # Parcourir les soumissions et compter les soumissions par jour de la semaine
+            for submission in submissions:
+                # Extraire le jour de la semaine (lundi = 0, dimanche = 6)
+                weekday = submission["Created"].weekday()
+
+                # Compter la soumission pour ce jour de la semaine
+                weekday_count[weekday] += 1
+
+            # Dictionnaire pour correspondre l'ordre et le nom du jour de la semaine
+            weekdays = {
+                0: "Lundi",
+                1: "Mardi",
+                2: "Mercredi",
+                3: "Jeudi",
+                4: "Vendredi",
+                5: "Samedi",
+                6: "Dimanche",
+            }
+
+            # Création de la table SubmissionWeekdayCount si elle n'existe pas
+            curseur.execute("""
+            CREATE TABLE IF NOT EXISTS SubmissionWeekdayCount (
+                Weekday TEXT PRIMARY KEY,
+                Id INTEGER NOT NULL,
+                NbSubmissions INTEGER NOT NULL
+            )
+            """)
+
+            # Insérer ou mettre à jour les résultats dans la table SubmissionWeekdayCount
+            for weekday, count in weekday_count.items():
+                try:
+                    curseur.execute(
+                        """
+                    INSERT INTO SubmissionWeekdayCount (Weekday, Id, NbSubmissions) 
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(Weekday) 
+                    DO UPDATE SET NbSubmissions = excluded.NbSubmissions
+                    """,
+                        (weekdays[weekday], weekday, count),
+                    )
+                except sqlite3.IntegrityError as e:
+                    print(
+                        f"Erreur d'intégrité lors de l'insertion des données pour le jour {weekdays[weekday]}: {e}"
+                    )
+                except sqlite3.Error as e:
+                    print(
+                        f"Une erreur est survenue lors de l'insertion des données pour le jour {weekdays[weekday]}: {e}"
+                    )
+
+            # Validation des changements
+            connexion.commit()
+
+        except sqlite3.Error as e:
+            print(
+                f"Une erreur est survenue lors de la connexion ou de l'exécution des requêtes : {e}"
+            )
+
+        finally:
+            # Fermeture de la connexion
+            if connexion:
+                connexion.close()

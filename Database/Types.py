@@ -67,9 +67,9 @@ class DbComment(TypedDict):
     Submission_id: str
     Body: str
 
-class DbKeywordWeight(TypedDict):
+class DbWeightedKeyword(TypedDict):
     """
-    This module defines the KeywordWeight TypedDict for representing keyword weight information in the database.
+    This module defines the TypedDict for representing keyword weight information in the database.
 
     Attributes:
         Keyword (str): The keyword.
@@ -78,9 +78,9 @@ class DbKeywordWeight(TypedDict):
     Keyword: str
     Weight: int
 
-class DbCategoryWeight(TypedDict):
+class DbWeightedCategory(TypedDict):
     """
-    This module defines the CategoryWeight TypedDict for representing category weight information in the database.
+    This module defines the TypedDict for representing category weight information in the database.
 
     Attributes:
         Category (str): The category.
